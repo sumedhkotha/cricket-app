@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #F8FAFB;
+    color: #0B1B3A;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  h1, h2, h3, h4, .font-heading {
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-full bg-forest text-white font-medium hover:bg-forest-light transition-all duration-200 active:scale-[0.98] shadow-sm;
+  }
+  
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-navy border border-surface-border font-medium hover:bg-gray-50 transition-all duration-200 active:scale-[0.98];
+  }
+
+  .btn-accent {
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-full bg-gold text-navy-dark font-semibold hover:bg-gold-light transition-all duration-200 active:scale-[0.98] shadow-sm;
+  }
+
+  .app-card {
+    @apply bg-white rounded-card border border-surface-border p-6 shadow-soft;
+  }
+
+  .app-input {
+    @apply w-full h-[46px] px-4 rounded-input border border-surface-border bg-white text-navy focus:outline-none focus:ring-2 focus:ring-forest focus:border-transparent transition-all;
+  }
+
+  .app-textarea {
+    @apply w-full p-4 rounded-input border border-surface-border bg-white text-navy focus:outline-none focus:ring-2 focus:ring-forest focus:border-transparent transition-all resize-y;
+  }
+
+  .stat-label {
+    @apply text-[12px] uppercase font-bold tracking-wider text-slate-500;
+  }
+
+  .stat-number {
+    @apply font-heading text-4xl lg:text-5xl font-extrabold leading-none tracking-tight;
+  }
+}
+
+/* Custom scrollbar for modals & lists */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
