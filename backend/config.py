@@ -13,6 +13,7 @@ class Settings:
     # Razorpay Config
     RAZORPAY_KEY_ID: str = os.getenv("RAZORPAY_KEY_ID", "rzp_test_cricketvault_demo")
     RAZORPAY_KEY_SECRET: str = os.getenv("RAZORPAY_KEY_SECRET", "cricketvault_secret_demo")
+    RAZORPAY_WEBHOOK_SECRET: str = os.getenv("RAZORPAY_WEBHOOK_SECRET", "cricketvault_webhook_secret_demo")
     IS_MOCK_PAYMENTS: bool = os.getenv("MOCK_PAYMENTS", "true").lower() == "true"
 
     # Cricket Live Data API Config

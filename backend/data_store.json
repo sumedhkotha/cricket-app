@@ -746,11 +746,12 @@
       "user_id": "player_user_rohan",
       "plan_id": "plan_elite",
       "status": "active",
-      "started_at": "2026-10-06T00:00:00",
-      "expires_at": "2026-10-31T23:59:59",
+      "started_at": "2026-10-09T17:16:33.647412+00:00",
+      "expires_at": "2026-11-08T17:16:33.647412+00:00",
       "amount": 699,
-      "reviews_remaining": 2,
-      "_id": "6ac8d3cb475894374c218299"
+      "reviews_remaining": 3,
+      "_id": "6ac8d3cb475894374c218299",
+      "updated_at": "2026-10-09T17:16:33.647412+00:00"
     },
     {
       "id": "sub_82ed0f57b8",
@@ -762,6 +763,17 @@
       "amount": 699,
       "reviews_remaining": 3,
       "_id": "6ac8e7fed2d9f64368075bb6"
+    },
+    {
+      "id": "sub_d936923633",
+      "user_id": "player_user_aarav",
+      "plan_id": "plan_elite",
+      "status": "active",
+      "started_at": "2026-10-09T17:16:33.669997+00:00",
+      "expires_at": "2026-11-08T17:16:33.669997+00:00",
+      "amount": 699,
+      "reviews_remaining": 3,
+      "_id": "6ac92171435ef5c8d51dbc8a"
     }
   ],
   "video_reviews": [
@@ -1020,6 +1032,53 @@
       "gateway_payment_id": "pay_rzp_mock_1791551486634",
       "created_at": "2026-10-09T13:11:22.388433+00:00",
       "_id": "6ac8e7fad2d9f64368075bb5"
+    },
+    {
+      "id": "pay_e2f5515cf8",
+      "user_id": "player_user_rohan",
+      "item_name": "Elite",
+      "type": "plan",
+      "item_id": "plan_elite",
+      "amount": 699,
+      "currency": "INR",
+      "status": "paid",
+      "gateway_order_id": "order_rzp_96d780727a37",
+      "gateway_payment_id": "pay_test_44087dc652ad4c",
+      "created_at": "2026-10-09T17:16:33.603552+00:00",
+      "_id": "6ac92171435ef5c8d51dbc85",
+      "verified_at": "2026-10-09T17:16:33.647412+00:00",
+      "updated_at": "2026-10-09T17:16:33.647412+00:00"
+    },
+    {
+      "id": "pay_e4fee1c4e8",
+      "user_id": "player_user_rohan",
+      "item_name": "Elite",
+      "type": "plan",
+      "item_id": "plan_elite",
+      "amount": 699,
+      "currency": "INR",
+      "status": "failed",
+      "gateway_order_id": "order_rzp_d6772bfd660a",
+      "gateway_payment_id": null,
+      "created_at": "2026-10-09T17:16:33.633554+00:00",
+      "_id": "6ac92171435ef5c8d51dbc86",
+      "updated_at": "2026-10-09T17:16:33.640387+00:00"
+    },
+    {
+      "id": "pay_8d8dd6b021",
+      "user_id": "player_user_aarav",
+      "item_name": "Elite",
+      "type": "plan",
+      "item_id": "plan_elite",
+      "amount": 699,
+      "currency": "INR",
+      "status": "paid",
+      "gateway_order_id": "order_rzp_5aa8c07ffc26",
+      "gateway_payment_id": "pay_wh_d9c738d5",
+      "created_at": "2026-10-09T17:16:33.659781+00:00",
+      "_id": "6ac92171435ef5c8d51dbc89",
+      "verified_at": "2026-10-09T17:16:33.669997+00:00",
+      "updated_at": "2026-10-09T17:16:33.669997+00:00"
     }
   ],
   "earnings": [
@@ -1168,6 +1227,42 @@
       "read": false,
       "created_at": "2026-10-09T13:11:26.641733+00:00",
       "_id": "6ac8e7fed2d9f64368075bb8"
+    },
+    {
+      "id": "notif_ec6f03fa3f",
+      "user_id": "player_user_rohan",
+      "title": "Payment Successful",
+      "body": "Your payment of \u20b9699 for Elite was successful and verified.",
+      "read": false,
+      "created_at": "2026-10-09T17:16:33.647412+00:00",
+      "_id": "6ac92171435ef5c8d51dbc87"
+    },
+    {
+      "id": "notif_28ffcbf343",
+      "user_id": "user_admin_01",
+      "title": "Payment Received",
+      "body": "Rohan Verma purchased Elite (\u20b9699).",
+      "read": false,
+      "created_at": "2026-10-09T17:16:33.647412+00:00",
+      "_id": "6ac92171435ef5c8d51dbc88"
+    },
+    {
+      "id": "notif_12a13c9fa9",
+      "user_id": "player_user_aarav",
+      "title": "Payment Successful",
+      "body": "Your payment of \u20b9699 for Elite was successful and verified.",
+      "read": false,
+      "created_at": "2026-10-09T17:16:33.669997+00:00",
+      "_id": "6ac92171435ef5c8d51dbc8b"
+    },
+    {
+      "id": "notif_3f308dbed5",
+      "user_id": "user_admin_01",
+      "title": "Payment Received",
+      "body": "Aarav Patel purchased Elite (\u20b9699).",
+      "read": false,
+      "created_at": "2026-10-09T17:16:33.669997+00:00",
+      "_id": "6ac92171435ef5c8d51dbc8c"
     }
   ],
   "announcements": [

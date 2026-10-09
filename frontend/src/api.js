@@ -123,6 +123,8 @@ export const api = {
   // Payments
   createOrder: (type, itemId) =>
     apiFetch('/payments/create-order', { method: 'POST', body: JSON.stringify({ type, item_id: itemId }) }),
+  testAuthorizePayment: (orderId) =>
+    apiFetch('/payments/test-authorize', { method: 'POST', body: JSON.stringify({ order_id: orderId }) }),
   verifyPayment: (data) => apiFetch('/payments/verify', { method: 'POST', body: JSON.stringify(data) }),
 
   // Coach Directory & Academy Integration

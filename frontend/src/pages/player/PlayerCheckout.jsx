@@ -67,31 +67,92 @@ export const PlayerCheckout = () => {
     setProcessing(true);
     setStatusState('processing');
 
-    // Simulate standard payment gateway network response latency
-    setTimeout(async () => {
-      try {
+    try {
+      if (!simulateSuccess) {
+        // User cancelled or simulated failure
         const verifyRes = await api.verifyPayment({
           order_id: orderData.order_id,
-          payment_id: simulateSuccess ? `pay_rzp_mock_${Date.now()}` : null,
-          signature: simulateSuccess ? 'mock_sig_valid' : null,
-          success: simulateSuccess,
+          success: false,
         });
-
-        if (verifyRes.success) {
-          setStatusState('success');
-          triggerConfetti();
-          await refreshUser();
-        } else {
-          setErrorMessage(verifyRes.message || 'Payment transaction was declined.');
-          setStatusState('failure');
-        }
-      } catch (err) {
-        setErrorMessage(err.message || 'Payment verification failed');
+        setErrorMessage(verifyRes.message || 'Payment transaction was declined.');
         setStatusState('failure');
-      } finally {
-        setProcessing(false);
+        return;
       }
-    }, 900);
+
+      // Check if real Razorpay Checkout is loaded and configured with live keys
+      if (
+        window.Razorpay &&
+        !orderData.is_mock &&
+        orderData.key_id &&
+        !orderData.key_id.startsWith('rzp_test_cricketvault_demo')
+      ) {
+        const options = {
+          key: orderData.key_id,
+          amount: orderData.amount * 100,
+          currency: orderData.currency || 'INR',
+          name: 'Cricket Vault Coaching',
+          description: orderData.item_name,
+          order_id: orderData.order_id,
+          handler: async function (response) {
+            try {
+              const verifyRes = await api.verifyPayment({
+                order_id: response.razorpay_order_id,
+                payment_id: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+                success: true,
+              });
+              if (verifyRes.success) {
+                setStatusState('success');
+                triggerConfetti();
+                await refreshUser();
+              } else {
+                setErrorMessage(verifyRes.message || 'Payment verification failed');
+                setStatusState('failure');
+              }
+            } catch (err) {
+              setErrorMessage(err.message || 'Verification failed');
+              setStatusState('failure');
+            } finally {
+              setProcessing(false);
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              setProcessing(false);
+              setStatusState('idle');
+            },
+          },
+          theme: { color: '#0B4D3B' },
+        };
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+        return;
+      }
+
+      // In test/mock mode, obtain authentic cryptographic authorization signature from backend
+      const authPayload = await api.testAuthorizePayment(orderData.order_id);
+
+      const verifyRes = await api.verifyPayment({
+        order_id: authPayload.order_id,
+        payment_id: authPayload.payment_id,
+        signature: authPayload.signature,
+        success: true,
+      });
+
+      if (verifyRes.success) {
+        setStatusState('success');
+        triggerConfetti();
+        await refreshUser();
+      } else {
+        setErrorMessage(verifyRes.message || 'Payment transaction was declined.');
+        setStatusState('failure');
+      }
+    } catch (err) {
+      setErrorMessage(err.message || 'Payment verification failed');
+      setStatusState('failure');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (
