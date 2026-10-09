@@ -5,12 +5,35 @@ from pydantic import BaseModel
 from typing import Optional
 
 from backend.database import db, persist_mock_db
-from backend.auth import require_admin
+from backend.auth import require_admin, hash_password
 
 router = APIRouter(prefix="/admin", tags=["Admin"], dependencies=[Depends(require_admin)])
 
 class AssignCoachRequest(BaseModel):
     coach_id: str
+
+class CreatePlayerAdminRequest(BaseModel):
+    name: str
+    email: str
+    password: Optional[str] = "demo1234"
+    mobile: Optional[str] = "+91 98000 00000"
+    location: Optional[str] = "Hyderabad, India"
+    playing_role: Optional[str] = "Batter"
+    experience: Optional[str] = "Intermediate"
+    batting_style: Optional[str] = "Right Hand"
+    bowling_style: Optional[str] = "None"
+    age: Optional[int] = 18
+
+class CreateCoachAdminRequest(BaseModel):
+    name: str
+    email: str
+    password: Optional[str] = "demo1234"
+    mobile: Optional[str] = "+91 98111 22233"
+    specialty: Optional[str] = "Batting Coach"
+    academy_name: Optional[str] = "Cricket Academy"
+    location: Optional[str] = "Hyderabad, India"
+    bio: Optional[str] = "Certified professional cricket coach."
+    experience_years: Optional[int] = 10
 
 @router.get("/stats")
 def get_admin_stats():
@@ -90,6 +113,40 @@ def toggle_player_status(player_id: str):
     
     return {"id": player_id, "status": new_status, "message": f"Player status updated to {new_status}"}
 
+@router.post("/players")
+def create_player(req: CreatePlayerAdminRequest):
+    clean_email = req.email.strip().lower()
+    if db.users.find_one({"email": clean_email}):
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+        
+    user_id = f"user_player_{uuid.uuid4().hex[:10]}"
+    now_iso = datetime.now(timezone.utc).isoformat()
+    pwd = req.password if req.password else "demo1234"
+    
+    new_user = {
+        "id": user_id,
+        "role": "player",
+        "name": req.name.strip(),
+        "email": clean_email,
+        "password_hash": hash_password(pwd),
+        "mobile": req.mobile,
+        "location": req.location,
+        "playing_role": req.playing_role,
+        "experience": req.experience,
+        "batting_style": req.batting_style,
+        "bowling_style": req.bowling_style,
+        "age": req.age,
+        "status": "active",
+        "created_at": now_iso
+    }
+    db.users.insert_one(new_user)
+    persist_mock_db()
+    
+    out = dict(new_user)
+    out.pop("password_hash", None)
+    out.pop("_id", None)
+    return out
+
 @router.get("/coaches")
 def get_coaches():
     coaches = list(db.coaches.find())
@@ -104,6 +161,57 @@ def get_coaches():
             c_dict["email"] = user.get("email")
         result.append(c_dict)
     return result
+
+@router.post("/coaches")
+def create_coach(req: CreateCoachAdminRequest):
+    clean_email = req.email.strip().lower()
+    if db.users.find_one({"email": clean_email}):
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+        
+    user_id = f"user_coach_{uuid.uuid4().hex[:10]}"
+    coach_id = f"coach_{uuid.uuid4().hex[:10]}"
+    now_iso = datetime.now(timezone.utc).isoformat()
+    pwd = req.password if req.password else "demo1234"
+    
+    new_user = {
+        "id": user_id,
+        "role": "coach",
+        "name": req.name.strip(),
+        "email": clean_email,
+        "password_hash": hash_password(pwd),
+        "mobile": req.mobile,
+        "location": req.location,
+        "status": "active",
+        "created_at": now_iso
+    }
+    db.users.insert_one(new_user)
+    
+    coach_profile = {
+        "id": coach_id,
+        "user_id": user_id,
+        "name": req.name.strip(),
+        "email": clean_email,
+        "specialty": req.specialty,
+        "academy_name": req.academy_name,
+        "category": "Batters and Fielders",
+        "discipline": "Batting",
+        "location": req.location,
+        "bio": req.bio,
+        "biography": req.bio,
+        "experience_years": req.experience_years,
+        "rating": 5.0,
+        "total_reviews": 0,
+        "pricing": {"monthly": 2999, "single_review": 499},
+        "verification_status": "verified",
+        "achievements": ["Certified Cricket Coach"],
+        "created_at": now_iso
+    }
+    db.coaches.insert_one(coach_profile)
+    persist_mock_db()
+    
+    out = dict(coach_profile)
+    out.pop("_id", None)
+    return out
 
 @router.get("/reviews")
 def get_reviews():

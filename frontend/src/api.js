@@ -52,8 +52,10 @@ export const api = {
   getRevenueTrend: () => apiFetch('/admin/revenue-trend'),
   getRevenueMix: () => apiFetch('/admin/revenue-mix'),
   getAdminPlayers: () => apiFetch('/admin/players'),
+  createAdminPlayer: (data) => apiFetch('/admin/players', { method: 'POST', body: JSON.stringify(data) }),
   togglePlayerStatus: (id) => apiFetch(`/admin/players/${id}/status`, { method: 'PATCH' }),
   getAdminCoaches: () => apiFetch('/admin/coaches'),
+  createAdminCoach: (data) => apiFetch('/admin/coaches', { method: 'POST', body: JSON.stringify(data) }),
   getAdminReviews: () => apiFetch('/admin/reviews'),
   assignCoach: (reviewId, coachId) =>
     apiFetch(`/admin/reviews/${reviewId}/assign`, { method: 'PATCH', body: JSON.stringify({ coach_id: coachId }) }),

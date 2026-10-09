@@ -28,9 +28,27 @@ import {
 } from 'lucide-react';
 
 export const Shell = ({ children, title, subtitle, headerAction }) => {
-  const { user, role, logout } = useAuth();
+  const { user, role, logout, login } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const handleSwitchDashboard = async (targetRole) => {
+    if (targetRole === role) return;
+    try {
+      const demoCreds = {
+        player: { email: 'player@cricketvault.demo', password: 'demo1234' },
+        coach: { email: 'coach@cricketvault.demo', password: 'demo1234' },
+        admin: { email: 'admin@cricketvault.demo', password: 'demo1234' },
+      };
+      const creds = demoCreds[targetRole];
+      if (creds) {
+        await login(creds);
+        navigate(`/${targetRole}`);
+      }
+    } catch (err) {
+      console.error('Failed to switch dashboard role:', err);
+    }
+  };
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -167,8 +185,47 @@ export const Shell = ({ children, title, subtitle, headerAction }) => {
             </div>
           </Link>
 
-          {/* Dark Green Pill with Gold Role */}
-          <div className="hidden sm:inline-flex items-center px-3.5 py-1 rounded-full bg-forest text-gold text-xs font-heading font-bold uppercase tracking-widest border border-forest-dark/40 shadow-xs">
+          {/* Dashboard Role Switcher */}
+          <div className="hidden lg:flex items-center space-x-1 bg-slate-100/90 p-1 rounded-full border border-slate-200 shadow-2xs">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2">
+              Dashboard:
+            </span>
+            <button
+              onClick={() => handleSwitchDashboard('player')}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                role === 'player'
+                  ? 'bg-forest text-gold shadow-xs'
+                  : 'text-slate-600 hover:text-navy hover:bg-white/80'
+              }`}
+              title="Switch to Player Dashboard"
+            >
+              Player
+            </button>
+            <button
+              onClick={() => handleSwitchDashboard('coach')}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                role === 'coach'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-navy hover:bg-white/80'
+              }`}
+              title="Switch to Coach Dashboard"
+            >
+              Coach
+            </button>
+            <button
+              onClick={() => handleSwitchDashboard('admin')}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                role === 'admin'
+                  ? 'bg-indigo-700 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-navy hover:bg-white/80'
+              }`}
+              title="Switch to Admin Dashboard"
+            >
+              Admin
+            </button>
+          </div>
+
+          <div className="lg:hidden inline-flex items-center px-3 py-0.5 rounded-full bg-forest text-gold text-xs font-heading font-bold uppercase tracking-widest border border-forest-dark/40 shadow-xs">
             {role}
           </div>
         </div>
@@ -376,7 +433,45 @@ export const Shell = ({ children, title, subtitle, headerAction }) => {
                 })}
               </nav>
 
-              <div className="pt-4 border-t border-surface-border">
+              <div className="pt-3 pb-2 border-t border-surface-border">
+                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-2">
+                  Switch Dashboard
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 px-1 mb-2">
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleSwitchDashboard('player');
+                    }}
+                    className={`py-1.5 text-xs font-bold rounded-lg border text-center ${
+                      role === 'player' ? 'bg-forest text-gold border-forest' : 'bg-slate-50 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    Player
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleSwitchDashboard('coach');
+                    }}
+                    className={`py-1.5 text-xs font-bold rounded-lg border text-center ${
+                      role === 'coach' ? 'bg-amber-600 text-white border-amber-600' : 'bg-slate-50 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    Coach
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleSwitchDashboard('admin');
+                    }}
+                    className={`py-1.5 text-xs font-bold rounded-lg border text-center ${
+                      role === 'admin' ? 'bg-indigo-700 text-white border-indigo-700' : 'bg-slate-50 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    Admin
+                  </button>
+                </div>
                 <button
                   onClick={handleLogout}
                   className="flex items-center space-x-3 w-full px-4 py-3 text-red-600 font-medium text-sm hover:bg-red-50 rounded-full"
