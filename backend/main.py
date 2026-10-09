@@ -43,8 +43,11 @@ app.add_middleware(
 )
 
 # Ensure upload directory exists and mount static files
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-app.mount("/api/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+try:
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    app.mount("/api/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+except Exception as e:
+    print(f"Warning: could not mount uploads directory: {e}")
 
 # Include Routers with /api prefix
 app.include_router(auth_router, prefix="/api")
@@ -58,8 +61,10 @@ app.include_router(upload_router, prefix="/api")
 app.include_router(cricket_router, prefix="/api")
 
 @app.get("/")
+@app.get("/api")
+@app.get("/api/health")
 def root():
-    return {"message": "Cricket Vault API is running smoothly", "version": "1.0.0"}
+    return {"message": "Cricket Vault API is running smoothly", "version": "1.0.0", "status": "healthy"}
 
 if __name__ == "__main__":
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)

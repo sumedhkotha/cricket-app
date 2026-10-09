@@ -6,7 +6,8 @@ from backend.config import settings
 
 _db_instance = None
 _is_mock = False
-_storage_file = os.path.join(os.path.dirname(__file__), "data_store.json")
+_storage_file = "/tmp/data_store.json" if os.getenv("VERCEL") else os.path.join(os.path.dirname(__file__), "data_store.json")
+_bundled_file = os.path.join(os.path.dirname(__file__), "data_store.json")
 
 def get_db():
     global _db_instance, _is_mock
@@ -30,15 +31,16 @@ def get_db():
         _db_instance = mock_client[settings.DATABASE_NAME]
         _is_mock = True
         
-        # Load persisted data if exists
-        if os.path.exists(_storage_file):
+        # Load persisted data if exists (check /tmp first on Vercel, else bundled seed file)
+        source_file = _storage_file if os.path.exists(_storage_file) else _bundled_file
+        if os.path.exists(source_file):
             try:
-                with open(_storage_file, "r", encoding="utf-8") as f:
+                with open(source_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     for col_name, docs in data.items():
                         if docs:
                             _db_instance[col_name].insert_many(docs)
-                print(f"Loaded persistent data from {_storage_file}")
+                print(f"Loaded persistent data from {source_file}")
             except Exception as read_err:
                 print(f"Error loading persistent data: {read_err}")
 

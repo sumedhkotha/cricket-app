@@ -20,8 +20,8 @@ class Settings:
     CRICKET_API_PROVIDER: str = os.getenv("CRICKET_API_PROVIDER", "cricapi")
     CRICKET_CACHE_TTL_SECONDS: int = int(os.getenv("CRICKET_CACHE_TTL_SECONDS", "30"))
 
-    # Uploads
-    UPLOAD_DIR: str = os.path.join(os.path.dirname(__file__), "uploads")
+    # Uploads (uses /tmp on serverless environments like Vercel)
+    UPLOAD_DIR: str = "/tmp/uploads" if os.getenv("VERCEL") else os.path.join(os.path.dirname(__file__), "uploads")
 
 settings = Settings()
 
