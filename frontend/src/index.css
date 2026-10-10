@@ -17,19 +17,23 @@
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center px-6 py-3 rounded-full bg-forest text-white font-medium hover:bg-forest-light transition-all duration-200 active:scale-[0.98] shadow-sm;
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-full bg-forest text-white font-medium hover:bg-forest-light transition-all duration-200 active:scale-[0.98] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2;
   }
   
   .btn-secondary {
-    @apply inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-navy border border-surface-border font-medium hover:bg-gray-50 transition-all duration-200 active:scale-[0.98];
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-navy border border-surface-border font-medium hover:bg-gray-50 hover:border-slate-300 transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2;
   }
 
   .btn-accent {
-    @apply inline-flex items-center justify-center px-6 py-3 rounded-full bg-gold text-navy-dark font-semibold hover:bg-gold-light transition-all duration-200 active:scale-[0.98] shadow-sm;
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-full bg-gold text-navy-dark font-semibold hover:bg-gold-light transition-all duration-200 active:scale-[0.98] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2;
   }
 
   .app-card {
-    @apply bg-white rounded-card border border-surface-border p-6 shadow-soft;
+    @apply bg-white rounded-card border border-surface-border p-6 shadow-soft transition-all duration-200;
+  }
+
+  .card-hover {
+    @apply transition-all duration-200 hover:-translate-y-1 hover:shadow-elevated hover:border-forest/30;
   }
 
   .app-input {
@@ -41,11 +45,29 @@
   }
 
   .stat-label {
-    @apply text-[12px] uppercase font-bold tracking-wider text-slate-500;
+    @apply text-[11px] uppercase font-bold tracking-wider text-slate-500 font-heading;
   }
 
   .stat-number {
-    @apply font-heading text-4xl lg:text-5xl font-extrabold leading-none tracking-tight;
+    @apply font-heading text-4xl lg:text-5xl font-extrabold leading-none tracking-tight tabular-nums;
+  }
+
+  /* Cricket-inspired seam accent line */
+  .cricket-seam-accent {
+    background-image: repeating-linear-gradient(
+      45deg,
+      #F59E0B 0,
+      #F59E0B 4px,
+      transparent 4px,
+      transparent 8px
+    );
+    height: 3px;
+    border-radius: 9999px;
+  }
+
+  /* Skeleton loading placeholder */
+  .skeleton-bone {
+    @apply bg-slate-200/80 rounded animate-pulse;
   }
 }
 
@@ -66,4 +88,16 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

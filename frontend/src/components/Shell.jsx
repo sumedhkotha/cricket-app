@@ -24,8 +24,10 @@ import {
   LogOut,
   ChevronRight,
   ShieldAlert,
-  Megaphone
+  Megaphone,
+  Activity
 } from 'lucide-react';
+import { CricketSeam } from './CricketSeam';
 
 export const Shell = ({ children, title, subtitle, headerAction }) => {
   const { user, role, logout, login } = useAuth();
@@ -139,6 +141,7 @@ export const Shell = ({ children, title, subtitle, headerAction }) => {
   } else if (role === 'player') {
     navItems = [
       { label: 'Overview', path: '/player', icon: LayoutDashboard },
+      { label: 'Cricket Hub', path: '/player/cricket', icon: Activity },
       { label: 'Announcements', path: '/player/announcements', icon: Megaphone, badge: unreadAnnouncements },
       { label: 'Coach Directory', path: '/player/coaches', icon: Award },
       { label: 'Video Reviews', path: '/player/reviews', icon: Video },
@@ -348,28 +351,34 @@ export const Shell = ({ children, title, subtitle, headerAction }) => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center justify-between px-5 py-3.5 rounded-full font-medium text-sm transition-all duration-150 ${
+                  className={`flex items-center justify-between px-5 py-3.5 rounded-full font-medium text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest ${
                     isActive
-                      ? 'bg-forest text-white shadow-sm font-semibold'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-navy'
+                      ? 'bg-forest text-white shadow-xs font-semibold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-navy hover:translate-x-1'
                   }`}
                 >
                   <div className="flex items-center space-x-3.5">
-                    <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                    <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-gold' : 'text-slate-500'}`} />
                     <span>{item.label}</span>
                   </div>
-                  {item.badge > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-gold text-navy-dark text-[10px] font-bold">
-                      {item.badge}
-                    </span>
-                  )}
+                  <div className="flex items-center space-x-2">
+                    {item.badge > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-gold text-navy-dark text-[10px] font-bold">
+                        {item.badge}
+                      </span>
+                    )}
+                    {isActive && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-gold shrink-0 animate-pulse" />
+                    )}
+                  </div>
                 </Link>
               );
             })}
           </nav>
 
           {/* Bottom helper or support link */}
-          <div className="pt-6 border-t border-surface-border">
+          <div className="pt-6 border-t border-surface-border space-y-3">
+            <CricketSeam orientation="horizontal" className="w-full text-gold/30" />
             <div className="p-4 rounded-card bg-[#F8FAFB] border border-surface-border">
               <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Cricket Vault Pro</p>
               <p className="text-xs text-slate-600 mt-1">Certified coaching & video analytics</p>

@@ -4,7 +4,11 @@ import { Shell } from '../../components/Shell';
 import { StatusPill } from '../../components/StatusPill';
 import { YouTubeEmbed } from '../../components/YouTubeEmbed';
 import { api } from '../../api';
-import { PlayCircle, X, Star, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { PlayCircle, X, Star, CheckCircle2, AlertCircle, Clock, Video, PlusCircle, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ReviewRowSkeleton } from '../../components/SkeletonLoader';
+import { ReviewProgressSteps } from '../../components/ReviewProgressSteps';
+import { CricketSeam } from '../../components/CricketSeam';
 
 export const PlayerReviews = () => {
   const location = useLocation();
@@ -86,6 +90,15 @@ export const PlayerReviews = () => {
     <Shell
       title="My Video Reviews"
       subtitle="Track technical evaluations, biomechanics breakdowns and coach drills."
+      headerAction={
+        <Link
+          to="/player/submit"
+          className="btn-primary text-xs sm:text-sm px-5 py-2.5 font-bold flex items-center space-x-1.5"
+        >
+          <PlusCircle className="w-4 h-4" />
+          <span>Submit Video</span>
+        </Link>
+      }
     >
       {toastMessage && (
         <div className="mb-6 p-4 rounded-input bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center space-x-2 animate-in fade-in">
@@ -95,18 +108,25 @@ export const PlayerReviews = () => {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="w-10 h-10 border-4 border-forest/20 border-t-forest rounded-full animate-spin" />
+        <div className="py-4">
+          <ReviewRowSkeleton count={3} />
         </div>
       ) : reviews.length === 0 ? (
-        <div className="app-card py-20 text-center flex flex-col items-center justify-center max-w-lg mx-auto">
-          <div className="w-16 h-16 bg-forest/10 rounded-full flex items-center justify-center text-forest mb-4">
-            <PlayCircle className="w-8 h-8" />
+        <div className="app-card py-16 px-6 text-center flex flex-col items-center justify-center max-w-lg mx-auto relative overflow-hidden">
+          <div className="w-16 h-16 bg-forest/10 rounded-2xl flex items-center justify-center text-forest mb-4 shadow-2xs">
+            <Video className="w-8 h-8" />
           </div>
-          <h2 className="font-heading font-bold text-2xl text-navy">No video reviews yet.</h2>
-          <p className="text-sm text-slate-500 mt-1 max-w-xs">
-            Submit your batting or bowling video to receive detailed feedback from a certified coach.
+          <h2 className="font-heading font-extrabold text-2xl text-navy">No video reviews yet</h2>
+          <p className="text-xs text-slate-500 mt-2 mb-6 max-w-sm leading-relaxed">
+            Record your net session, batting drill, or bowling run-up. Submit a link to receive a 7-point biomechanics evaluation from our certified coaches.
           </p>
+          <Link
+            to="/player/submit"
+            className="btn-primary text-xs font-bold px-6 py-3 flex items-center space-x-2 shadow-sm"
+          >
+            <span>Submit Your First Video</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
       ) : (
         <div className="space-y-4">
@@ -122,55 +142,62 @@ export const PlayerReviews = () => {
             return (
               <div
                 key={r.id}
-                className="app-card flex flex-col sm:flex-row sm:items-center justify-between gap-5 p-6 hover:shadow-elevated transition-all"
+                className="app-card card-hover flex flex-col justify-between p-6 group"
               >
-                {/* Left: Thumbnail & Content */}
-                <div className="flex items-start space-x-4 flex-1">
-                  {/* YouTube Thumbnail (rounded) */}
-                  <div className="relative w-36 sm:w-44 aspect-video rounded-xl overflow-hidden bg-black shrink-0 shadow-xs border border-surface-border">
-                    <img
-                      src={thumbUrl}
-                      alt="Review Thumbnail"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.src = 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&q=80&w=400';
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                      <PlayCircle className="w-8 h-8 text-white/90 drop-shadow-md" />
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+                  {/* Left: Thumbnail & Content */}
+                  <div className="flex items-start space-x-4 flex-1">
+                    {/* YouTube Thumbnail with hover play zoom */}
+                    <div className="relative w-36 sm:w-44 aspect-video rounded-xl overflow-hidden bg-black shrink-0 shadow-xs border border-surface-border group-hover:border-forest/40 transition-colors">
+                      <img
+                        src={thumbUrl}
+                        alt="Review Thumbnail"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          e.target.src = 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&q=80&w=400';
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-black/25 flex items-center justify-center group-hover:bg-black/15 transition-colors">
+                        <PlayCircle className="w-8 h-8 text-white/90 drop-shadow-md group-hover:scale-110 transition-transform" />
+                      </div>
+                    </div>
+
+                    <div className="flex-1">
+                      {/* Green Type Pill */}
+                      <div className="mb-2">
+                        <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-heading font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          {r.review_type} Review
+                        </span>
+                      </div>
+
+                      {/* Bold Question */}
+                      <h3 className="font-heading font-bold text-xl sm:text-2xl text-navy leading-snug">
+                        "{r.question}"
+                      </h3>
+
+                      {/* Grey: Submitted DD/MM/YYYY · Coach: <Name> */}
+                      <p className="text-xs text-slate-500 mt-1.5 font-medium">
+                        Submitted {dateStr} · Coach: <span className="text-navy font-semibold">{r.coach_name || 'Rahul Sharma'}</span>
+                      </p>
                     </div>
                   </div>
 
-                  <div className="flex-1">
-                    {/* Green Type Pill */}
-                    <div className="mb-2">
-                      <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-[#D1FAE5] text-[#065F46] border border-[#A7F3D0]">
-                        {r.review_type}
-                      </span>
-                    </div>
+                  {/* Right: Status Pill + View Button */}
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 w-full sm:w-auto">
+                    <StatusPill status={r.status} />
 
-                    {/* Bold Question */}
-                    <h3 className="font-heading font-bold text-xl sm:text-2xl text-navy leading-snug">
-                      "{r.question}"
-                    </h3>
-
-                    {/* Grey: Submitted DD/MM/YYYY · Coach: <Name> */}
-                    <p className="text-xs text-slate-500 mt-1.5 font-medium">
-                      Submitted {dateStr} · Coach: <span className="text-navy font-semibold">{r.coach_name || 'Rahul Sharma'}</span>
-                    </p>
+                    <button
+                      onClick={() => openViewModal(r)}
+                      className="btn-secondary text-xs sm:text-sm px-6 py-2 font-semibold hover:-translate-y-0.5 active:scale-[0.98] transition-all"
+                    >
+                      View Details
+                    </button>
                   </div>
                 </div>
 
-                {/* Right: Status Pill + View Button */}
-                <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                  <StatusPill status={r.status} />
-
-                  <button
-                    onClick={() => openViewModal(r)}
-                    className="btn-secondary text-xs sm:text-sm px-6 py-2 font-semibold"
-                  >
-                    View
-                  </button>
+                {/* Pitch Crease Timeline bar */}
+                <div className="mt-4 pt-3 border-t border-slate-100">
+                  <ReviewProgressSteps status={r.status} />
                 </div>
               </div>
             );
@@ -192,12 +219,16 @@ export const PlayerReviews = () => {
             <h2 className="font-heading font-extrabold text-3xl text-navy mb-1">
               {selectedReview.review_type} Review
             </h2>
-            <p className="text-xs text-slate-500 mb-6">
+            <p className="text-xs text-slate-500 mb-4">
               Coach: {selectedReview.coach_name || 'Rahul Sharma'} · Submitted{' '}
               {selectedReview.submitted_at
                 ? new Date(selectedReview.submitted_at).toLocaleDateString('en-GB')
                 : '26/09/2026'}
             </p>
+
+            <div className="mb-6 p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <ReviewProgressSteps status={selectedReview.status} />
+            </div>
 
             {/* Embedded YouTube Player */}
             <div className="mb-6">

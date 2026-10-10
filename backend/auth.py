@@ -6,7 +6,9 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from backend.config import settings
 from backend.database import db
 
+from typing import Optional
 security = HTTPBearer()
+security_optional = HTTPBearer(auto_error=False)
 
 def hash_password(password: str) -> str:
     pwd_bytes = password.encode('utf-8')
@@ -53,6 +55,19 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             detail="Account is deactivated. Please contact platform administrator."
         )
     return user
+    
+async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_optional)):
+    if not credentials:
+        return None
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id = payload.get("sub")
+        if not user_id:
+            return None
+        return db.users.find_one({"id": user_id})
+    except Exception:
+        return None
 
 async def require_admin(current_user: dict = Depends(get_current_user)):
     if current_user.get("role") != "admin":

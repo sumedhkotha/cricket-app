@@ -18,8 +18,13 @@ import {
   Building2,
   ShieldCheck,
   Flame,
-  ChevronRight
+  ChevronRight,
+  UserCheck
 } from 'lucide-react';
+import { PlayerProfileCard } from '../../components/PlayerProfileCard';
+import { CricketSeam } from '../../components/CricketSeam';
+import { CricketAnalyticsHub } from '../../components/CricketAnalyticsHub';
+import { StatsSkeleton, ReviewRowSkeleton } from '../../components/SkeletonLoader';
 
 export const PlayerOverview = () => {
   const { user } = useAuth();
@@ -61,10 +66,10 @@ export const PlayerOverview = () => {
   const hasPlan = overview?.has_active_plan;
 
   const statCards = [
-    { label: 'ACTIVE PLAN', value: activePlan, isGreen: activePlan !== 'None', isPlan: true },
-    { label: 'REVIEWS REMAINING', value: reviewsRemaining, isGreen: reviewsRemaining > 0 },
-    { label: 'COMPLETED REVIEWS', value: completedCount, isGreen: true },
-    { label: 'UPCOMING CLASSES', value: upcomingCount, isGreen: true },
+    { label: 'ACTIVE PLAN', value: activePlan, isGreen: activePlan !== 'None', icon: ShieldCheck },
+    { label: 'REVIEWS REMAINING', value: reviewsRemaining, isGreen: reviewsRemaining > 0, icon: Video },
+    { label: 'COMPLETED REVIEWS', value: completedCount, isGreen: true, icon: CheckCircle2 },
+    { label: 'UPCOMING CLASSES', value: upcomingCount, isGreen: true, icon: Calendar },
   ];
 
   const recentReviews = overview?.recent_reviews || [];
@@ -77,19 +82,48 @@ export const PlayerOverview = () => {
 
   const upcomingSessions = overview?.upcoming_sessions || [];
 
+  if (loading) {
+    return (
+      <Shell>
+        <div className="space-y-6">
+          <div className="h-32 bg-slate-200/80 rounded-[28px] animate-pulse" />
+          <StatsSkeleton count={4} />
+          <ReviewRowSkeleton count={3} />
+        </div>
+      </Shell>
+    );
+  }
+
   return (
     <Shell>
-      {/* Dark green hero banner */}
+      {/* Dark green hero banner with cricket seam accent */}
       <div className="rounded-[28px] bg-gradient-to-r from-[#0F4A30] to-[#0B3D2B] p-8 sm:p-10 text-white mb-8 shadow-elevated relative overflow-hidden">
         <div className="relative z-10">
+          <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-white/10 text-gold text-xs font-heading font-bold uppercase tracking-wider mb-3">
+            <span>🏏 High-Performance Training Hub</span>
+          </div>
           <h1 className="font-heading font-extrabold text-4xl sm:text-5xl tracking-tight">
             Welcome back, {playerName}
           </h1>
           <p className="text-white/80 text-base mt-2 font-medium">
             Keep working on your game. Your next improvement starts today.
           </p>
+          <div className="flex flex-wrap gap-3 mt-4">
+            <Link
+              to="/player/cricket"
+              className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-full text-xs font-heading font-bold bg-white/15 hover:bg-white/25 text-white border border-white/20 backdrop-blur-sm transition-all"
+            >
+              <span>Explore Cricket Hub & Stats</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
         <div className="absolute right-0 top-0 bottom-0 w-80 bg-white/5 rounded-full blur-2xl pointer-events-none" />
+      </div>
+
+      {/* Featured Player Profile Card */}
+      <div className="mb-8">
+        <PlayerProfileCard user={user} overview={overview} />
       </div>
 
       {/* No active plan warning banner if applicable */}
@@ -186,17 +220,30 @@ export const PlayerOverview = () => {
 
       {/* 4 Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-        {statCards.map((card, idx) => (
-          <div key={idx} className="app-card flex flex-col justify-between">
-            <span className="stat-label">{card.label}</span>
-            <div className="mt-3">
-              <span className={`stat-number ${card.isGreen ? 'text-forest' : 'text-slate-400'}`}>
-                {card.value}
-              </span>
+        {statCards.map((card, idx) => {
+          const Icon = card.icon;
+          return (
+            <div key={idx} className="app-card card-hover flex flex-col justify-between p-5 sm:p-6 group">
+              <div className="flex items-center justify-between">
+                <span className="stat-label">{card.label}</span>
+                {Icon && (
+                  <div className="w-8 h-8 rounded-xl bg-forest/10 text-forest flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Icon className="w-4 h-4" />
+                  </div>
+                )}
+              </div>
+              <div className="mt-3">
+                <span className={`stat-number ${card.isGreen ? 'text-forest' : 'text-slate-400'}`}>
+                  {card.value}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
+
+      {/* Cricket Performance & Plan-Gated Analytics Hub */}
+      <CricketAnalyticsHub activePlan={activePlan} />
 
       {/* Row: Recent Reviews (wide) + Current Coach */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">

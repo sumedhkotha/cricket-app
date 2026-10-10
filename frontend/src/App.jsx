@@ -37,6 +37,7 @@ import { PlayerCheckout } from './pages/player/PlayerCheckout';
 import { PlayerLibrary } from './pages/player/PlayerLibrary';
 import { PlayerMessages } from './pages/player/PlayerMessages';
 import { PlayerProfile } from './pages/player/PlayerProfile';
+import { PlayerCricketHub } from './pages/player/PlayerCricketHub';
 
 // Coaches Directory & Announcements
 import { CoachDirectory } from './pages/coaches/CoachDirectory';
@@ -263,6 +264,14 @@ export default function App() {
             element={
               <ProtectedRoute allowedRole="player">
                 <PlayerSubscription />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/player/cricket"
+            element={
+              <ProtectedRoute allowedRole="player">
+                <PlayerCricketHub />
               </ProtectedRoute>
             }
           />

@@ -2,8 +2,9 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Shell } from '../../components/Shell';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api';
-import { Send, MessageSquare, User, PlusCircle, Lock, Sparkles, ArrowRight } from 'lucide-react';
+import { Send, MessageSquare, User, PlusCircle, Lock, Sparkles, ArrowRight, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { CricketSeam } from '../../components/CricketSeam';
 
 export const PlayerMessages = () => {
   const { user } = useAuth();
@@ -15,6 +16,7 @@ export const PlayerMessages = () => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState('');
   const messagesEndRef = useRef(null);
 
   const loadThreadsAndCoaches = async () => {
@@ -91,6 +93,7 @@ export const PlayerMessages = () => {
     const bodyText = newMessage.trim();
     setNewMessage('');
     setSending(true);
+    setSendError('');
 
     try {
       const sentMsg = await api.sendPlayerMessage(activeThreadId, bodyText);
@@ -98,6 +101,7 @@ export const PlayerMessages = () => {
       loadThreadsAndCoaches();
     } catch (err) {
       console.error('Failed to send message:', err);
+      setSendError('Unable to send message. Please ensure your coaching subscription is active to message coaches.');
     } finally {
       setSending(false);
     }
@@ -112,7 +116,8 @@ export const PlayerMessages = () => {
       subtitle="Direct line of communication with certified cricket instructors."
     >
       {threadsData.locked ? (
-        <div className="app-card border-2 border-gold/40 bg-gradient-to-br from-amber-50/40 via-white to-amber-50/20 p-8 sm:p-12 text-center rounded-[28px] shadow-lg animate-in fade-in">
+        <div className="app-card border-2 border-gold/40 bg-gradient-to-br from-amber-50/40 via-white to-amber-50/20 p-8 sm:p-12 text-center rounded-[28px] shadow-lg animate-in fade-in relative overflow-hidden">
+          <CricketSeam orientation="horizontal" className="w-full text-gold/30 mb-8" />
           <div className="w-16 h-16 rounded-2xl bg-gold/15 text-gold-dark flex items-center justify-center mx-auto mb-5 shadow-2xs">
             <Lock className="w-8 h-8" />
           </div>
@@ -134,7 +139,7 @@ export const PlayerMessages = () => {
           <div>
             <button
               onClick={() => navigate('/player/plans')}
-              className="px-6 py-3.5 bg-forest hover:bg-forest-light text-white text-sm font-bold rounded-xl transition-all shadow-md inline-flex items-center space-x-2 group"
+              className="px-6 py-3.5 bg-forest hover:bg-forest-light text-white text-sm font-bold rounded-xl transition-all shadow-md inline-flex items-center space-x-2 group card-hover"
             >
               <span>View Subscription Plans</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -238,7 +243,7 @@ export const PlayerMessages = () => {
               {/* Header */}
               <div className="p-4 border-b border-surface-border flex items-center justify-between bg-white">
                 <div className="flex items-center space-x-3">
-                  <div className="w-9 h-9 rounded-full bg-forest text-white flex items-center justify-center font-bold text-sm">
+                  <div className="w-10 h-10 rounded-full bg-forest text-gold border border-gold/30 flex items-center justify-center font-bold text-sm shadow-xs">
                     {activeCoach.name ? activeCoach.name.charAt(0).toUpperCase() : 'C'}
                   </div>
                   <div>
@@ -247,6 +252,7 @@ export const PlayerMessages = () => {
                   </div>
                 </div>
               </div>
+              <CricketSeam orientation="horizontal" className="w-full text-forest/15" />
 
               {/* Messages Bubble Area */}
               <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-[#F8FAFB]/60">
@@ -264,7 +270,7 @@ export const PlayerMessages = () => {
                         className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}
                       >
                         <div
-                          className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                          className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed transition-all ${
                             isOwn
                               ? 'bg-forest text-white rounded-br-none shadow-xs'
                               : 'bg-white text-navy border border-surface-border rounded-bl-none shadow-xs'
@@ -272,7 +278,7 @@ export const PlayerMessages = () => {
                         >
                           {m.body}
                         </div>
-                        <span className="text-[10px] text-slate-400 mt-1 px-1">
+                        <span className="text-[10px] text-slate-400 mt-1 px-1 tabular-nums">
                           {m.created_at
                             ? new Date(m.created_at).toLocaleTimeString([], {
                                 hour: '2-digit',
@@ -287,6 +293,22 @@ export const PlayerMessages = () => {
                 <div ref={messagesEndRef} />
               </div>
 
+              {/* Error banner if send failed / subscription expired */}
+              {sendError && (
+                <div className="mx-4 mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>{sendError}</span>
+                  </div>
+                  <button
+                    onClick={() => navigate('/player/plans')}
+                    className="text-xs font-bold text-forest hover:underline ml-2 whitespace-nowrap"
+                  >
+                    Renew Plan
+                  </button>
+                </div>
+              )}
+
               {/* Input Form */}
               <form
                 onSubmit={handleSendMessage}
@@ -295,17 +317,21 @@ export const PlayerMessages = () => {
                 <input
                   type="text"
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type a message..."
-                  className="app-input flex-1 h-11 text-sm"
+                  onChange={(e) => {
+                    setNewMessage(e.target.value);
+                    if (sendError) setSendError('');
+                  }}
+                  disabled={sending}
+                  placeholder="Type a coaching message..."
+                  className="app-input flex-1 h-11 text-sm focus:ring-2 focus:ring-forest/20 focus:border-forest"
                 />
                 <button
                   type="submit"
                   disabled={!newMessage.trim() || sending}
-                  className="btn-primary h-11 px-6 font-bold text-sm shadow-xs"
+                  className="btn-primary h-11 px-6 font-bold text-sm shadow-xs flex items-center space-x-1.5 disabled:opacity-50"
                 >
                   <Send className="w-4 h-4 mr-1.5" />
-                  Send
+                  <span>{sending ? 'Sending...' : 'Send'}</span>
                 </button>
               </form>
             </>

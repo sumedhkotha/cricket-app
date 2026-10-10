@@ -116,5 +116,8 @@ class DBCollections:
     @property
     def announcement_reads(self):
         return get_db()["announcement_reads"]
+    @property
+    def webhook_events(self):
+        return get_db()["webhook_events"]
 
 db = DBCollections()

@@ -64,8 +64,10 @@ def get_coach_stats(current_user: dict = Depends(require_coach)):
     
     # Reviews
     pending_reviews = db.video_reviews.count_documents({
-        "coach_id": coach_id,
-        "status": {"$in": ["assigned", "under_review"]}
+        "$or": [
+            {"coach_id": coach_id, "status": {"$in": ["assigned", "under_review"]}},
+            {"coach_id": None, "status": "submitted"}
+        ]
     })
     completed_reviews = db.video_reviews.count_documents({
         "coach_id": coach_id,
@@ -73,7 +75,12 @@ def get_coach_stats(current_user: dict = Depends(require_coach)):
     })
     
     # Distinct players assigned
-    all_coach_reviews = list(db.video_reviews.find({"coach_id": coach_id}))
+    all_coach_reviews = list(db.video_reviews.find({
+        "$or": [
+            {"coach_id": coach_id},
+            {"coach_id": None, "status": "submitted"}
+        ]
+    }))
     player_ids = set(r.get("player_id") for r in all_coach_reviews if r.get("player_id"))
     assigned_players = len(player_ids)
     
@@ -91,12 +98,23 @@ def get_coach_stats(current_user: dict = Depends(require_coach)):
 @router.get("/reviews")
 def get_coach_reviews(status: Optional[str] = None, current_user: dict = Depends(require_coach)):
     coach_id = current_user["id"]
-    query = {"coach_id": coach_id}
     
     if status == "pending":
-        query["status"] = {"$in": ["assigned", "under_review"]}
+        query = {
+            "$or": [
+                {"coach_id": coach_id, "status": {"$in": ["assigned", "under_review"]}},
+                {"coach_id": None, "status": "submitted"}
+            ]
+        }
     elif status == "completed":
-        query["status"] = "completed"
+        query = {"coach_id": coach_id, "status": "completed"}
+    else:
+        query = {
+            "$or": [
+                {"coach_id": coach_id},
+                {"coach_id": None, "status": "submitted"}
+            ]
+        }
         
     reviews = list(db.video_reviews.find(query))
     result = []
@@ -118,9 +136,22 @@ def get_coach_reviews(status: Optional[str] = None, current_user: dict = Depends
 @router.get("/reviews/{review_id}")
 def get_coach_review_detail(review_id: str, current_user: dict = Depends(require_coach)):
     coach_id = current_user["id"]
-    review = db.video_reviews.find_one({"id": review_id, "coach_id": coach_id})
+    review = db.video_reviews.find_one({"id": review_id})
     if not review:
-        raise HTTPException(status_code=404, detail="Review not found or not assigned to you")
+        raise HTTPException(status_code=404, detail="Review not found")
+        
+    # If unassigned, auto-claim for this coach
+    if review.get("coach_id") is None:
+        now_iso = datetime.now(timezone.utc).isoformat()
+        db.video_reviews.update_one(
+            {"id": review_id},
+            {"$set": {"coach_id": coach_id, "status": "under_review", "assigned_at": now_iso}}
+        )
+        persist_mock_db()
+        review["coach_id"] = coach_id
+        review["status"] = "under_review"
+    elif review.get("coach_id") != coach_id:
+        raise HTTPException(status_code=403, detail="Review is assigned to another coach")
         
     r_dict = dict(review)
     r_dict.pop("_id", None)

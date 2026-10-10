@@ -120,12 +120,32 @@ export const api = {
   markAllAnnouncementsRead: () =>
     apiFetch('/player/announcements/read-all', { method: 'POST' }),
 
-  // Payments
-  createOrder: (type, itemId) =>
-    apiFetch('/payments/create-order', { method: 'POST', body: JSON.stringify({ type, item_id: itemId }) }),
+  // Payments & Subscriptions
+  createOrder: (type, itemId, billingCycle = 'monthly') =>
+    apiFetch('/payments/create-order', {
+      method: 'POST',
+      body: JSON.stringify({ type, item_id: itemId, billing_cycle: billingCycle }),
+    }),
   testAuthorizePayment: (orderId) =>
     apiFetch('/payments/test-authorize', { method: 'POST', body: JSON.stringify({ order_id: orderId }) }),
   verifyPayment: (data) => apiFetch('/payments/verify', { method: 'POST', body: JSON.stringify(data) }),
+  cancelPlayerSubscription: () =>
+    apiFetch('/payments/cancel-subscription', { method: 'POST' }),
+  reactivatePlayerSubscription: () =>
+    apiFetch('/payments/reactivate-subscription', { method: 'POST' }),
+  getPlanChangeQuote: (targetPlanId, billingCycle = 'monthly') =>
+    apiFetch(`/payments/plan-change-quote?target_plan_id=${targetPlanId}&billing_cycle=${billingCycle}`),
+
+  // Cricket Data & Plan-Restricted Features
+  getCricketMatches: () => apiFetch('/cricket/matches'),
+  getCricketLiveScores: () => apiFetch('/cricket/live-scores'),
+  getCricketPointsTable: (tournament = 'IPL 2026') =>
+    apiFetch(`/cricket/points-table?tournament=${encodeURIComponent(tournament)}`),
+  getCricketStats: () => apiFetch('/cricket/stats'),
+  compareCricketPlayers: (playerIds = '') =>
+    apiFetch(`/cricket/comparison${playerIds ? `?player_ids=${encodeURIComponent(playerIds)}` : ''}`),
+  getEliteAnalytics: (playerId = 'ply_vk18') =>
+    apiFetch(`/cricket/analytics?player_id=${encodeURIComponent(playerId)}`),
 
   // Coach Directory & Academy Integration
   getCoachesDirectory: (params = {}) => {

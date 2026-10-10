@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Shell } from '../../components/Shell';
 import { api } from '../../api';
-import { PlayCircle, AlertCircle, Sparkles, Send, Lock, ArrowRight } from 'lucide-react';
+import { PlayCircle, AlertCircle, Sparkles, Send, Lock, ArrowRight, UserCheck } from 'lucide-react';
+import { CricketSeam } from '../../components/CricketSeam';
 
 export const PlayerSubmit = () => {
   const navigate = useNavigate();
@@ -13,23 +14,31 @@ export const PlayerSubmit = () => {
   const [reviewType, setReviewType] = useState('Batting');
   const [question, setQuestion] = useState('');
   const [notes, setNotes] = useState('');
+  const [selectedCoachId, setSelectedCoachId] = useState('');
+  const [coachesList, setCoachesList] = useState([]);
 
   const [extractedId, setExtractedId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const loadSub = async () => {
+    const loadData = async () => {
       try {
-        const data = await api.getPlayerSubscription();
-        setSubData(data?.subscription);
+        const [subRes, dirRes] = await Promise.all([
+          api.getPlayerSubscription().catch(() => null),
+          api.getCoachesDirectory().catch(() => null),
+        ]);
+        setSubData(subRes?.subscription);
+        if (dirRes?.coaches) {
+          setCoachesList(dirRes.coaches);
+        }
       } catch (err) {
-        console.error('Failed to load subscription:', err);
+        console.error('Failed to load submit data:', err);
       } finally {
         setLoadingSub(false);
       }
     };
-    loadSub();
+    loadData();
   }, []);
 
   // Extract YouTube ID dynamically
@@ -84,9 +93,10 @@ export const PlayerSubmit = () => {
         review_type: reviewType,
         question: question.trim(),
         notes: notes.trim(),
+        coach_id: selectedCoachId || undefined,
       });
       navigate('/player/reviews', {
-        state: { message: 'Video review submitted successfully! A coach will review it shortly.' },
+        state: { message: 'Video review submitted successfully! Your coach has received it for evaluation.' },
       });
     } catch (err) {
       setError(err.message || 'Failed to submit review');
@@ -97,12 +107,13 @@ export const PlayerSubmit = () => {
   return (
     <Shell
       title="Submit Video for Review"
-      subtitle="Paste a YouTube link. Within 48 hours a coach will send detailed feedback."
+      subtitle="Paste a YouTube link. Your coach will evaluate your technique and prescribe drills."
     >
       <div className="max-w-[840px]">
         {/* Subscription Requirement Lock Card */}
         {!loadingSub && !hasRemainingReviews ? (
-          <div className="app-card border-2 border-gold/40 bg-gradient-to-br from-amber-50/40 via-white to-amber-50/20 p-8 sm:p-12 text-center rounded-[28px] shadow-lg animate-in fade-in">
+          <div className="app-card border-2 border-gold/40 bg-gradient-to-br from-amber-50/40 via-white to-amber-50/20 p-8 sm:p-12 text-center rounded-[28px] shadow-lg animate-in fade-in relative overflow-hidden">
+            <CricketSeam orientation="horizontal" className="w-full text-gold/30 mb-8" />
             <div className="w-16 h-16 rounded-2xl bg-gold/15 text-gold-dark flex items-center justify-center mx-auto mb-5 shadow-2xs">
               <Lock className="w-8 h-8" />
             </div>
@@ -140,8 +151,35 @@ export const PlayerSubmit = () => {
               </div>
             )}
 
-            <div className="app-card p-8 sm:p-10 shadow-soft">
+            <div className="app-card p-8 sm:p-10 shadow-soft overflow-hidden relative">
+              <CricketSeam orientation="horizontal" className="w-full text-gold/25 -mt-4 mb-6" />
               <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Coach Selection */}
+            <div>
+              <label className="block text-xs uppercase font-bold tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
+                <span>Select Coach / Mentor *</span>
+                <span className="text-[11px] font-semibold text-forest flex items-center space-x-1">
+                  <UserCheck className="w-3.5 h-3.5 text-forest" />
+                  <span>Direct Delivery to Coach</span>
+                </span>
+              </label>
+              <select
+                value={selectedCoachId}
+                onChange={(e) => setSelectedCoachId(e.target.value)}
+                className="app-input"
+              >
+                <option value="">Auto-Assign to Available Verified Coach</option>
+                {coachesList.map((c) => (
+                  <option key={c.user_id || c.id} value={c.user_id || c.id}>
+                    {c.name} {c.specialty ? `(${c.specialty})` : ''} {c.academy_name ? `— ${c.academy_name}` : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-400 mt-1">
+                Your video will be delivered directly to the selected coach's Pending Reviews dashboard.
+              </p>
+            </div>
+
             {/* YouTube URL */}
             <div>
               <label className="block text-xs uppercase font-bold tracking-wider text-slate-500 mb-1.5">
@@ -239,7 +277,7 @@ export const PlayerSubmit = () => {
                 }`}
               >
                 <Send className="w-4 h-4" />
-                <span>{submitting ? 'Submitting...' : 'Submit for Review'}</span>
+                <span>{submitting ? 'Submitting to Coach...' : 'Submit Video to Coach'}</span>
               </button>
             </div>
           </form>

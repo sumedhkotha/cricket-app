@@ -20,6 +20,8 @@ import {
   Check,
   AlertCircle
 } from 'lucide-react';
+import { CricketSeam } from '../../components/CricketSeam';
+import { CardSkeleton } from '../../components/SkeletonLoader';
 
 const SPECIALIZATIONS = [
   'All',
@@ -213,27 +215,7 @@ export const CoachDirectory = () => {
         )}
 
         {/* LOADING STATE */}
-        {loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((n) => (
-              <div
-                key={n}
-                className="bg-white rounded-[20px] border border-surface-border p-6 shadow-xs animate-pulse space-y-4"
-              >
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 rounded-full bg-slate-200" />
-                  <div className="space-y-2 flex-1">
-                    <div className="h-4 bg-slate-200 rounded w-3/4" />
-                    <div className="h-3 bg-slate-200 rounded w-1/2" />
-                  </div>
-                </div>
-                <div className="h-3 bg-slate-200 rounded w-full" />
-                <div className="h-3 bg-slate-200 rounded w-5/6" />
-                <div className="h-9 bg-slate-200 rounded-xl w-full" />
-              </div>
-            ))}
-          </div>
-        )}
+        {loading && <CardSkeleton count={6} />}
 
         {/* EMPTY STATE */}
         {!loading && coaches.length === 0 && (
@@ -271,8 +253,9 @@ export const CoachDirectory = () => {
               return (
                 <div
                   key={coach.id || coach._id}
-                  className="bg-white rounded-[20px] border border-surface-border hover:border-gold/50 transition-all duration-300 shadow-xs hover:shadow-md flex flex-col justify-between overflow-hidden group"
+                  className="app-card card-hover flex flex-col justify-between overflow-hidden group"
                 >
+                  <CricketSeam orientation="horizontal" className="w-full text-gold/25" />
                   {/* Card Header & Profile */}
                   <div className="p-6 space-y-4">
                     {/* Top Row: Verification & Category */}
@@ -306,26 +289,29 @@ export const CoachDirectory = () => {
 
                     {/* Coach Avatar + Name + Academy */}
                     <div className="flex items-start space-x-4">
-                      <div className="relative">
-                        {coach.image_url ? (
-                          <img
-                            src={coach.image_url}
-                            alt={coach.name}
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              e.currentTarget.nextElementSibling.style.display = 'flex';
-                            }}
-                            className="w-16 h-16 rounded-full object-cover border-2 border-gold/30 shadow-xs"
-                          />
-                        ) : null}
-                        <div
-                          style={{ display: coach.image_url ? 'none' : 'flex' }}
-                          className="w-16 h-16 rounded-full bg-forest text-gold font-heading text-2xl font-bold items-center justify-center border-2 border-gold/30 shadow-xs"
-                        >
-                          {initial}
+                      <div className="relative shrink-0">
+                        <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gold/40 shadow-xs bg-forest flex items-center justify-center">
+                          {coach.image_url ? (
+                            <img
+                              src={coach.image_url}
+                              alt={coach.name}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const fallback = e.currentTarget.parentElement?.querySelector('.avatar-fallback');
+                                if (fallback) fallback.style.display = 'flex';
+                              }}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
+                            />
+                          ) : null}
+                          <div
+                            style={{ display: coach.image_url ? 'none' : 'flex' }}
+                            className="avatar-fallback w-full h-full bg-forest text-gold font-heading text-2xl font-bold items-center justify-center"
+                          >
+                            {initial}
+                          </div>
                         </div>
                         {isVerified && (
-                          <div className="absolute -bottom-1 -right-1 bg-gold text-forest-dark p-0.5 rounded-full shadow-xs">
+                          <div className="absolute -bottom-1 -right-1 bg-gold text-forest-dark p-0.5 rounded-full shadow-xs ring-2 ring-white">
                             <Check className="w-3 h-3 stroke-[3]" />
                           </div>
                         )}
@@ -490,6 +476,7 @@ export const CoachDirectory = () => {
                   </div>
                 </div>
               </div>
+              <CricketSeam orientation="horizontal" className="w-full text-gold/30" />
 
               {/* Modal Body */}
               <div className="p-6 overflow-y-auto space-y-6 text-navy">

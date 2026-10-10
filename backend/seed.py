@@ -536,33 +536,144 @@ def seed_database(force: bool = False):
         }
         db.users.insert_one(player_user)
 
-    # 4. PLANS
-    elite_plan = {
-        "id": "plan_elite",
-        "name": "Elite",
-        "price": 699,
-        "interval": "month",
-        "reviews_per_month": 3,
-        "features": [
-            "3 video reviews per month",
-            "Detailed coach feedback within 48 hours",
-            "Direct messaging with coaches",
-            "Live sessions & open Q&A classes"
-        ],
-        "active": True
-    }
-    db.plans.insert_one(elite_plan)
+    # 4. PLANS (Rookie, Pro Striker, Elite Legend + Legacy Elite)
+    plans_data = [
+        {
+            "id": "plan_rookie",
+            "name": "Rookie",
+            "tier": "rookie",
+            "monthly_price": 499,
+            "yearly_price": 4990,
+            "price": 499,
+            "interval": "month",
+            "reviews_monthly": 1,
+            "reviews_yearly": 12,
+            "comparison_limit": 2,
+            "has_live_matches": True,
+            "has_advanced_stats": False,
+            "has_analytics_dashboard": False,
+            "has_ai_summaries": False,
+            "has_direct_messaging": False,
+            "badge": "STARTER",
+            "popular": False,
+            "description": "Essential cricket stats, basic scorecards, and fundamental player performance tracking.",
+            "features": [
+                "Essential cricket statistics",
+                "Player profiles & career stats",
+                "Live match information where available",
+                "Basic scorecards & match summaries",
+                "Limited player comparisons (up to 2 players)",
+                "1 certified coach video review/month"
+            ],
+            "active": True
+        },
+        {
+            "id": "plan_pro_striker",
+            "name": "Pro Striker",
+            "tier": "pro_striker",
+            "monthly_price": 899,
+            "yearly_price": 8990,
+            "price": 899,
+            "interval": "month",
+            "reviews_monthly": 3,
+            "reviews_yearly": 36,
+            "comparison_limit": 4,
+            "has_live_matches": True,
+            "has_advanced_stats": True,
+            "has_analytics_dashboard": False,
+            "has_ai_summaries": False,
+            "has_direct_messaging": True,
+            "badge": "MOST POPULAR",
+            "popular": True,
+            "description": "Advanced stats, match analysis, discipline filters, and deeper technique insights.",
+            "features": [
+                "Everything in Rookie, plus:",
+                "Advanced player statistics & strike rates",
+                "Detailed match analysis & run graphs",
+                "Extended player comparisons (up to 4 players)",
+                "Enhanced discipline filters & historical data",
+                "3 certified coach video reviews/month",
+                "Direct coach messaging"
+            ],
+            "active": True
+        },
+        {
+            "id": "plan_elite_legend",
+            "name": "Elite Legend",
+            "tier": "elite_legend",
+            "monthly_price": 1499,
+            "yearly_price": 14990,
+            "price": 1499,
+            "interval": "month",
+            "reviews_monthly": 6,
+            "reviews_yearly": 72,
+            "comparison_limit": 8,
+            "has_live_matches": True,
+            "has_advanced_stats": True,
+            "has_analytics_dashboard": True,
+            "has_ai_summaries": True,
+            "has_direct_messaging": True,
+            "badge": "BEST VALUE",
+            "popular": False,
+            "description": "Full access to advanced analytics dashboards, AI performance summaries, and priority coaching.",
+            "features": [
+                "Everything in Pro Striker, plus:",
+                "Advanced analytics dashboards & biomechanics",
+                "AI-assisted player performance summaries",
+                "Advanced comparison tools & head-to-head radar",
+                "Personalized technique drills & development plans",
+                "6 certified coach video reviews/month",
+                "Priority coach turnaround (within 24 hours)"
+            ],
+            "active": True
+        },
+        # Legacy plan alias for backward compatibility with existing tests
+        {
+            "id": "plan_elite",
+            "name": "Elite Legend",
+            "tier": "elite_legend",
+            "monthly_price": 699,
+            "yearly_price": 6990,
+            "price": 699,
+            "interval": "month",
+            "reviews_monthly": 3,
+            "reviews_yearly": 36,
+            "comparison_limit": 4,
+            "has_live_matches": True,
+            "has_advanced_stats": True,
+            "has_analytics_dashboard": True,
+            "has_ai_summaries": True,
+            "has_direct_messaging": True,
+            "badge": "LEGACY",
+            "popular": False,
+            "features": [
+                "3 video reviews per month",
+                "Detailed coach feedback within 48 hours",
+                "Direct messaging with coaches",
+                "Live sessions & open Q&A classes"
+            ],
+            "active": False
+        }
+    ]
+    for p in plans_data:
+        db.plans.insert_one(p)
 
-    # 5. SUBSCRIPTIONS (Rohan Verma has active Elite plan)
+    # 5. SUBSCRIPTIONS (Rohan Verma has active Elite Legend plan)
     sub_rohan = {
         "id": "sub_rohan_001",
         "user_id": "player_user_rohan",
-        "plan_id": "plan_elite",
+        "plan_id": "plan_elite_legend",
+        "plan_name": "Elite Legend",
+        "billing_period": "monthly",
         "status": "active",
         "started_at": "2026-10-06T00:00:00",
-        "expires_at": "2026-10-31T23:59:59",
-        "amount": 699,
-        "reviews_remaining": 2
+        "expires_at": "2026-11-06T23:59:59",
+        "next_billing_date": "2026-11-06T23:59:59",
+        "auto_renew": True,
+        "amount": 1499,
+        "currency": "INR",
+        "reviews_remaining": 5,
+        "reviews_total": 6
     }
     db.subscriptions.insert_one(sub_rohan)
 

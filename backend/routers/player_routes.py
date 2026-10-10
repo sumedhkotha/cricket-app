@@ -15,6 +15,7 @@ class SubmitReviewRequest(BaseModel):
     review_type: str = "Batting"
     question: str
     notes: Optional[str] = ""
+    coach_id: Optional[str] = None
 
 class RateReviewRequest(BaseModel):
     rating: int
@@ -172,18 +173,49 @@ def submit_player_review(req: SubmitReviewRequest, current_user: dict = Depends(
     now_iso = datetime.now(timezone.utc).isoformat()
     review_id = f"rev_{uuid.uuid4().hex[:10]}"
     
+    # Resolve target coach (requested coach or auto-assign to active coaching pool)
+    target_coach_id = req.coach_id
+    if target_coach_id:
+        coach_u = db.users.find_one({"id": target_coach_id, "role": "coach"})
+        if not coach_u:
+            coach_p = db.coaches.find_one({"id": target_coach_id})
+            if coach_p and coach_p.get("user_id"):
+                target_coach_id = coach_p.get("user_id")
+            else:
+                target_coach_id = None
+
+    if not target_coach_id:
+        # Check if player has an active coach message thread
+        existing_thread = db.message_threads.find_one({"player_id": player_id})
+        if existing_thread and existing_thread.get("coach_id"):
+            target_coach_id = existing_thread.get("coach_id")
+        else:
+            # Check if player had a previous review with an assigned coach
+            prior_rev = db.video_reviews.find_one({"player_id": player_id, "coach_id": {"$ne": None}})
+            if prior_rev and prior_rev.get("coach_id"):
+                target_coach_id = prior_rev.get("coach_id")
+            else:
+                # Default to primary active certified coach (Rahul or first coach)
+                primary_coach = db.users.find_one({"id": "coach_user_rahul", "role": "coach"})
+                if primary_coach:
+                    target_coach_id = primary_coach["id"]
+                else:
+                    first_coach = db.users.find_one({"role": "coach"})
+                    if first_coach:
+                        target_coach_id = first_coach["id"]
+
     new_review = {
         "id": review_id,
         "player_id": player_id,
-        "coach_id": None,
+        "coach_id": target_coach_id,
         "youtube_url": req.youtube_url.strip(),
         "youtube_id": yt_id,
         "review_type": req.review_type,
         "question": req.question.strip(),
         "notes": req.notes.strip() if req.notes else "",
-        "status": "submitted",
+        "status": "assigned" if target_coach_id else "submitted",
         "submitted_at": now_iso,
-        "assigned_at": None,
+        "assigned_at": now_iso if target_coach_id else None,
         "completed_at": None,
         "feedback": {},
         "rating": None,
@@ -195,6 +227,17 @@ def submit_player_review(req: SubmitReviewRequest, current_user: dict = Depends(
     new_remaining = max(0, sub.get("reviews_remaining", 1) - 1)
     db.subscriptions.update_one({"id": sub["id"]}, {"$set": {"reviews_remaining": new_remaining}})
     
+    # Send notification directly to the assigned coach
+    if target_coach_id:
+        db.notifications.insert_one({
+            "id": f"notif_{uuid.uuid4().hex[:10]}",
+            "user_id": target_coach_id,
+            "title": "New Video Review Received",
+            "body": f"Player {current_user.get('name', 'Student')} submitted a {req.review_type} review for your evaluation.",
+            "read": False,
+            "created_at": now_iso
+        })
+
     # Notify admins
     admins = list(db.users.find({"role": "admin"}))
     for a in admins:
@@ -260,15 +303,94 @@ def rate_review(review_id: str, req: RateReviewRequest, current_user: dict = Dep
 @router.get("/subscription")
 def get_player_subscription(current_user: dict = Depends(require_player)):
     player_id = current_user["id"]
-    sub = db.subscriptions.find_one({"user_id": player_id, "status": "active"})
+    sub = db.subscriptions.find_one({"user_id": player_id})
     clean_sub = None
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    
     if sub:
         clean_sub = dict(sub)
         clean_sub.pop("_id", None)
-        plan = db.plans.find_one({"id": clean_sub.get("plan_id")})
-        clean_sub["plan_name"] = plan.get("name", "Elite") if plan else "Elite"
-        clean_sub["price"] = plan.get("price", 699) if plan else 699
-        clean_sub["interval"] = plan.get("interval", "month") if plan else "month"
+        
+        # Check expiry
+        expires_at_str = clean_sub.get("expires_at")
+        is_expired = False
+        days_remaining = 0
+        if expires_at_str:
+            try:
+                exp_dt = datetime.fromisoformat(expires_at_str.replace("Z", "+00:00"))
+                if exp_dt.tzinfo is None:
+                    exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+                diff = exp_dt - now
+                days_remaining = max(0, diff.days)
+                if now > exp_dt:
+                    is_expired = True
+            except Exception:
+                pass
+                
+        if is_expired:
+            clean_sub["status"] = "expired"
+            clean_sub["is_access_valid"] = False
+        else:
+            clean_sub["is_access_valid"] = clean_sub.get("status") in ("active", "cancelled")
+            
+        clean_sub["days_remaining"] = days_remaining
+        
+        # Check renewal pending state (active, auto_renew True, within 3 days of expiration)
+        if clean_sub["is_access_valid"] and clean_sub.get("auto_renew") and days_remaining <= 3:
+            clean_sub["renewal_pending"] = True
+        else:
+            clean_sub["renewal_pending"] = False
+        
+        # Hydrate plan details
+        plan_id = clean_sub.get("plan_id")
+        plan = db.plans.find_one({"id": plan_id})
+        if not plan and plan_id == "plan_elite":
+            plan = db.plans.find_one({"id": "plan_elite_legend"})
+            
+        if plan:
+            clean_sub["plan_name"] = plan.get("name", "Cricket Plan")
+            clean_sub["tier"] = plan.get("tier", "rookie")
+            clean_sub["monthly_price"] = plan.get("monthly_price", 499)
+            clean_sub["yearly_price"] = plan.get("yearly_price", 4990)
+            clean_sub["features"] = plan.get("features", [])
+        else:
+            clean_sub["plan_name"] = "Cricket Plan"
+            clean_sub["tier"] = "rookie"
+            
+        clean_sub["billing_period"] = clean_sub.get("billing_period") or clean_sub.get("billing_cycle", "monthly")
+        clean_sub["billing_cycle"] = clean_sub["billing_period"]
+        clean_sub["price"] = clean_sub.get("amount", clean_sub.get("price", 499))
+        clean_sub["interval"] = "year" if clean_sub.get("billing_period") == "yearly" else "month"
+        clean_sub["auto_renew"] = clean_sub.get("auto_renew", clean_sub.get("status") == "active")
+        clean_sub["next_billing_date"] = clean_sub.get("next_billing_date") or clean_sub.get("expires_at")
+    else:
+        # Check if there is a pending or failed checkout
+        latest_payment = db.payments.find_one({"user_id": player_id}, sort=[("created_at", -1)])
+        if latest_payment and latest_payment.get("status") == "created":
+            fallback_status = "checkout_pending"
+        elif latest_payment and latest_payment.get("status") == "failed":
+            fallback_status = "payment_failed"
+        else:
+            fallback_status = "free"
+            
+        clean_sub = {
+            "status": fallback_status,
+            "plan_name": "Free Plan",
+            "tier": "free",
+            "price": 0,
+            "amount": 0,
+            "billing_period": "none",
+            "interval": "none",
+            "auto_renew": False,
+            "is_access_valid": False,
+            "reviews_remaining": 0,
+            "features": [
+                "Essential platform access",
+                "Community announcements",
+                "Coach directory exploration"
+            ]
+        }
         
     # Payment history
     payments = list(db.payments.find({"user_id": player_id}).sort("created_at", -1))
@@ -278,9 +400,18 @@ def get_player_subscription(current_user: dict = Depends(require_player)):
         p_dict.pop("_id", None)
         payments_list.append(p_dict)
         
+    # Active plans for upgrade/downgrade
+    all_plans = list(db.plans.find({"active": True}))
+    clean_plans = []
+    for ap in all_plans:
+        ap_dict = dict(ap)
+        ap_dict.pop("_id", None)
+        clean_plans.append(ap_dict)
+        
     return {
         "subscription": clean_sub,
-        "payment_history": payments_list
+        "payment_history": payments_list,
+        "available_plans": clean_plans
     }
 
 @router.get("/plans")

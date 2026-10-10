@@ -4,6 +4,7 @@ import confetti from 'canvas-confetti';
 import { Shell } from '../../components/Shell';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api';
+import { formatCurrency } from '../../utils/pricing';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -13,15 +14,34 @@ import {
   ArrowRight,
   Sparkles,
   BookOpen,
+  Zap,
+  Tag,
+  AlertCircle,
 } from 'lucide-react';
+
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 export const PlayerCheckout = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
 
   const itemType = searchParams.get('type') || 'plan';
-  const itemId = searchParams.get('id') || 'plan_elite';
+  const itemId = searchParams.get('id') || 'plan_rookie';
+  const billingCycle = searchParams.get('billing') || searchParams.get('billing_cycle') || searchParams.get('interval') || 'monthly'; // 'monthly' | 'yearly'
 
   const [orderData, setOrderData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -33,7 +53,7 @@ export const PlayerCheckout = () => {
   const initOrder = async () => {
     setLoading(true);
     try {
-      const data = await api.createOrder(itemType, itemId);
+      const data = await api.createOrder(itemType, itemId, billingCycle);
       setOrderData(data);
       setStatusState('idle');
     } catch (err) {
@@ -46,7 +66,8 @@ export const PlayerCheckout = () => {
 
   useEffect(() => {
     initOrder();
-  }, [itemType, itemId]);
+    loadRazorpayScript();
+  }, [itemType, itemId, billingCycle]);
 
   // Trigger celebration confetti on success
   const triggerConfetti = () => {
@@ -62,13 +83,13 @@ export const PlayerCheckout = () => {
     }
   };
 
-  const handlePay = async (simulateSuccess = true) => {
+  const handlePay = async (action = 'razorpay') => {
     if (!orderData) return;
     setProcessing(true);
     setStatusState('processing');
 
     try {
-      if (!simulateSuccess) {
+      if (action === 'simulate_failure') {
         // User cancelled or simulated failure
         const verifyRes = await api.verifyPayment({
           order_id: orderData.order_id,
@@ -79,20 +100,47 @@ export const PlayerCheckout = () => {
         return;
       }
 
-      // Check if real Razorpay Checkout is loaded and configured with live keys
-      if (
-        window.Razorpay &&
-        !orderData.is_mock &&
-        orderData.key_id &&
-        !orderData.key_id.startsWith('rzp_test_cricketvault_demo')
-      ) {
+      if (action === 'simulate_instant') {
+        // Instant test cryptographic authorization
+        const authPayload = await api.testAuthorizePayment(orderData.order_id);
+        const verifyRes = await api.verifyPayment({
+          order_id: authPayload.order_id,
+          payment_id: authPayload.payment_id,
+          signature: authPayload.signature,
+          success: true,
+        });
+        if (verifyRes.success) {
+          setStatusState('success');
+          triggerConfetti();
+          await refreshUser();
+        } else {
+          setErrorMessage(verifyRes.message || 'Payment authorization failed');
+          setStatusState('failure');
+        }
+        return;
+      }
+
+      // Live / Test Razorpay Checkout Modal
+      const isScriptLoaded = await loadRazorpayScript();
+      const activeKey =
+        orderData.key_id ||
+        import.meta.env.VITE_RAZORPAY_KEY_ID ||
+        import.meta.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
+        'rzp_test_TlJXyXiG8OLp2d';
+
+      if (isScriptLoaded && window.Razorpay) {
         const options = {
-          key: orderData.key_id,
-          amount: orderData.amount * 100,
+          key: activeKey,
+          amount: Math.round(orderData.amount * 100),
           currency: orderData.currency || 'INR',
           name: 'Cricket Vault Coaching',
-          description: orderData.item_name,
+          description: orderData.item_name || 'Cricket Vault Package',
           order_id: orderData.order_id,
+          prefill: {
+            name: user?.name || 'Player',
+            email: user?.email || 'player@cricketvault.demo',
+            contact: '9876543210',
+          },
           handler: async function (response) {
             try {
               const verifyRes = await api.verifyPayment({
@@ -124,14 +172,19 @@ export const PlayerCheckout = () => {
           },
           theme: { color: '#0B4D3B' },
         };
+
         const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (resp) {
+          setErrorMessage(resp.error?.description || 'Payment was declined or cancelled.');
+          setStatusState('failure');
+          setProcessing(false);
+        });
         rzp.open();
         return;
       }
 
-      // In test/mock mode, obtain authentic cryptographic authorization signature from backend
+      // Fallback if Razorpay SDK couldn't be loaded from CDN
       const authPayload = await api.testAuthorizePayment(orderData.order_id);
-
       const verifyRes = await api.verifyPayment({
         order_id: authPayload.order_id,
         payment_id: authPayload.payment_id,
@@ -155,10 +208,31 @@ export const PlayerCheckout = () => {
     }
   };
 
+  const activeKeyId =
+    orderData?.key_id ||
+    import.meta.env.VITE_RAZORPAY_KEY_ID ||
+    import.meta.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
+    'rzp_test_TlJXyXiG8OLp2d';
+
+  const isYearly = (orderData?.billing_period || billingCycle) === 'yearly';
+
+  // Compute breakdown amounts
+  const payableAmount = orderData?.amount || 0;
+  const regularAnnualPrice = isYearly
+    ? payableAmount === 4990
+      ? 5988
+      : payableAmount === 8990
+      ? 10788
+      : payableAmount === 14990
+      ? 17988
+      : Math.round(payableAmount * 1.2)
+    : payableAmount;
+  const annualSavings = isYearly ? regularAnnualPrice - payableAmount : 0;
+
   return (
     <Shell
       title="Secure Checkout"
-      subtitle="Complete your payment with Razorpay test gateway (INR)."
+      subtitle="Complete your payment securely with Razorpay test gateway (INR)."
     >
       <div className="max-w-4xl mx-auto my-6">
         {loading ? (
@@ -176,23 +250,33 @@ export const PlayerCheckout = () => {
               Payment Successful!
             </h2>
             <p className="text-sm text-slate-600 mb-6">
-              Thank you for your purchase. Your access has been activated instantly.
+              Thank you for your purchase. Your coaching membership has been activated with verified Razorpay signature.
             </p>
 
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-left mb-8 text-xs space-y-2">
               <div className="flex justify-between">
-                <span className="text-slate-500 font-bold uppercase">Item:</span>
+                <span className="text-slate-500 font-bold uppercase">Plan/Item:</span>
                 <span className="font-semibold text-navy">{orderData?.item_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-bold uppercase">Billing Period:</span>
+                <span className="font-semibold text-forest capitalize">
+                  {orderData?.billing_period || billingCycle}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500 font-bold uppercase">Amount Paid:</span>
                 <span className="font-heading font-extrabold text-forest text-base">
-                  ₹{orderData?.amount}
+                  ₹{formatCurrency(orderData?.amount || 0)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500 font-bold uppercase">Reference ID:</span>
-                <span className="font-mono text-slate-600">{orderData?.order_id}</span>
+                <span className="text-slate-500 font-bold uppercase">Gateway Order ID:</span>
+                <span className="font-mono text-slate-600 truncate max-w-[200px]">{orderData?.order_id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-bold uppercase">Payment Gateway:</span>
+                <span className="font-medium text-emerald-700">Razorpay (Active Test Gateway)</span>
               </div>
             </div>
 
@@ -265,73 +349,132 @@ export const PlayerCheckout = () => {
                     <h3 className="font-heading font-bold text-2xl text-navy">
                       {orderData?.item_name}
                     </h3>
+                    {itemType === 'plan' && (
+                      <span className="inline-flex items-center space-x-1 mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
+                        <Tag className="w-3 h-3" />
+                        <span>{isYearly ? 'Yearly Billing (16.7% Off)' : 'Monthly Billing'}</span>
+                      </span>
+                    )}
                   </div>
                 </div>
 
+                {/* Price Breakdown */}
                 <div className="space-y-3 text-sm py-4 border-t border-b border-slate-100">
+                  {isYearly && itemType === 'plan' ? (
+                    <>
+                      <div className="flex justify-between text-slate-600">
+                        <span>Original Annual Comparison:</span>
+                        <span className="line-through text-slate-400 font-semibold">
+                          ₹{formatCurrency(regularAnnualPrice)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-forest font-semibold">
+                        <span>Annual Discount (Save 16.7%):</span>
+                        <span>-₹{formatCurrency(annualSavings)}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-600">
+                        <span>Subtotal (Annual):</span>
+                        <span>₹{formatCurrency(payableAmount)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between text-slate-600">
+                      <span>Monthly Fee:</span>
+                      <span>₹{formatCurrency(payableAmount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-slate-600">
-                    <span>Subtotal</span>
-                    <span>₹{orderData?.amount}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>Taxes & Fees</span>
+                    <span>Taxes & GST:</span>
                     <span className="text-forest font-semibold">₹0 (Included)</span>
                   </div>
                 </div>
+
+                {/* Yearly billing disclaimer */}
+                {isYearly && itemType === 'plan' && (
+                  <div className="mt-4 p-3 bg-emerald-50/80 rounded-xl border border-emerald-200 text-xs text-emerald-900 flex items-start space-x-2">
+                    <AlertCircle className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                    <p className="leading-relaxed">
+                      <strong>Important:</strong> Yearly subscriptions are charged as one single annual payment of{' '}
+                      <strong>₹{formatCurrency(payableAmount)}</strong>, not as 12 monthly instalments.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="pt-6">
                 <div className="flex justify-between items-baseline mb-1">
-                  <span className="font-heading font-extrabold text-2xl text-navy">Total</span>
+                  <span className="font-heading font-extrabold text-2xl text-navy">Total Payable</span>
                   <span className="font-heading font-extrabold text-4xl text-forest">
-                    ₹{orderData?.amount}
+                    ₹{formatCurrency(payableAmount)}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400">Currency: Indian Rupee (INR)</p>
+                <p className="text-[11px] text-slate-400">
+                  Currency: Indian Rupee (INR) &bull; {isYearly ? 'Billed annually' : 'Billed monthly'}
+                </p>
               </div>
             </div>
 
             {/* Right Column: Payment */}
             <div className="app-card flex flex-col justify-between p-8 sm:p-10">
               <div>
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-4">
                   <h2 className="font-heading font-bold text-3xl text-navy">Payment</h2>
-                  <div className="flex items-center space-x-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
+                  <div className="flex items-center space-x-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                     <Lock className="w-3.5 h-3.5" />
-                    <span>256-bit Encrypted</span>
+                    <span>Razorpay Secure</span>
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-                  Test checkout mode is active. You can simulate instant authorization or test payment failure handling.
-                </p>
+                {/* Gateway Details Badge */}
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 mb-6 text-xs text-slate-600 flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <CreditCard className="w-4 h-4 text-forest" />
+                    <span className="font-semibold text-navy">Gateway Key:</span>
+                  </div>
+                  <span className="font-mono text-[11px] bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-700">
+                    {activeKeyId}
+                  </span>
+                </div>
 
-                {/* Razorpay Pay Button */}
+                {/* Razorpay Pay Buttons */}
                 <div className="space-y-3">
                   <button
                     type="button"
-                    onClick={() => handlePay(true)}
+                    onClick={() => handlePay('razorpay')}
                     disabled={processing}
-                    className="w-full btn-primary h-14 text-base font-bold shadow-md flex items-center justify-center space-x-2 text-white"
+                    className="w-full btn-primary h-14 text-base font-bold shadow-md flex items-center justify-center space-x-2 text-white hover:brightness-110 active:scale-[0.99] transition-all"
                   >
                     {processing ? (
                       <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
                         <CreditCard className="w-5 h-5" />
-                        <span>Pay ₹{orderData?.amount} (Authorize)</span>
+                        <span>Pay ₹{formatCurrency(payableAmount)} via Razorpay Modal</span>
                       </>
                     )}
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => handlePay(false)}
-                    disabled={processing}
-                    className="w-full btn-secondary h-11 text-xs font-semibold text-slate-500 hover:text-red-600 hover:bg-red-50"
-                  >
-                    Simulate Gateway Failure
-                  </button>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handlePay('simulate_instant')}
+                      disabled={processing}
+                      className="btn-secondary h-11 text-xs font-semibold text-forest hover:bg-emerald-50 border-emerald-200 flex items-center justify-center space-x-1"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-gold-dark" />
+                      <span>Instant Test Pay</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handlePay('simulate_failure')}
+                      disabled={processing}
+                      className="btn-secondary h-11 text-xs font-semibold text-slate-500 hover:text-red-600 hover:bg-red-50 hover:border-red-200"
+                    >
+                      Simulate Decline
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -339,10 +482,10 @@ export const PlayerCheckout = () => {
               <div className="mt-8 pt-6 border-t border-slate-100">
                 <div className="flex items-center space-x-2 text-xs text-slate-500 font-medium mb-2">
                   <ShieldCheck className="w-4 h-4 text-forest shrink-0" />
-                  <span>Supported Methods: UPI, Credit/Debit Cards, NetBanking</span>
+                  <span>UPI (GPay/PhonePe), Cards (Visa/Mastercard/RuPay), NetBanking</span>
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  By clicking Pay, you agree to Cricket Vault's terms of service and instant digital coaching fulfillment policy.
+                  Secured by Razorpay. 100% encrypted test payment environment.
                 </p>
               </div>
             </div>
