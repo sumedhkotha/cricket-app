@@ -12,6 +12,7 @@ skills/
 skills-lock.json
 data/
 desktop.ini
+.venv/
 
 # Ignore AI tool meta directories
 .adal/
